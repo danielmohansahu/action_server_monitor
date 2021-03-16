@@ -126,7 +126,7 @@ class PlotWidget(QWidget):
         self._initial_topics = initial_topics
 
         rp = rospkg.RosPack()
-        ui_file = os.path.join(rp.get_path('rqt_plot'), 'resource', 'plot.ui')
+        ui_file = os.path.join(rp.get_path('action_server_monitor'), 'resource', 'plot.ui')
         loadUi(ui_file, self)
         self.subscribe_topic_button.setIcon(QIcon.fromTheme('list-add'))
         self.remove_topic_button.setIcon(QIcon.fromTheme('list-remove'))

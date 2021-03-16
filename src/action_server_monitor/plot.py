@@ -68,7 +68,7 @@ class Plot(Plugin):
         context.add_widget(self._widget)
 
     def _parse_args(self, argv):
-        parser = argparse.ArgumentParser(prog='rqt_plot', add_help=False)
+        parser = argparse.ArgumentParser(prog='action_server_monitor', add_help=False)
         Plot.add_arguments(parser)
         args = parser.parse_args(argv)
 
@@ -95,7 +95,7 @@ class Plot(Plugin):
                     c_topics.append(sub_t)
             # 1053: resolve command-line topic names
             import rosgraph
-            c_topics = [rosgraph.names.script_resolve_name('rqt_plot', n) for n in c_topics]
+            c_topics = [rosgraph.names.script_resolve_name('action_server_monitor', n) for n in c_topics]
             if type(c_topics) == list:
                 topic_list.extend(c_topics)
             else:
@@ -106,7 +106,7 @@ class Plot(Plugin):
 
     @staticmethod
     def add_arguments(parser):
-        group = parser.add_argument_group('Options for rqt_plot plugin')
+        group = parser.add_argument_group('Options for action_server_monitor plugin')
         group.add_argument('-P', '--pause', action='store_true', dest='start_paused',
                            help='Start in paused state')
         group.add_argument('-e', '--empty', action='store_true', dest='start_empty',

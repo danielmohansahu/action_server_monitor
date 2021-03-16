@@ -272,7 +272,7 @@ class DataPlot(QWidget):
             {
                 'title': 'Show Plot Markers',
                 'description':
-                    'Warning: Displaying markers in rqt_plot may cause\n \t high cpu load, '
+                    'Warning: Displaying markers in action_server_monitor may cause\n \t high cpu load, '
                     'especially using PyQtGraph\n',
                 'enabled': True,
             }]
