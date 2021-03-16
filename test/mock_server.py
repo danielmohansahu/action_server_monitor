@@ -22,7 +22,7 @@ class MockAction(object):
       
     def execute_cb(self, goal):
         # helper variables
-        r = rospy.Rate(1)
+        r = rospy.Rate(0.01)
         success = True
         
         # append the seeds for the fibonacci sequence
