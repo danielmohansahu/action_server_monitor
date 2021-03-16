@@ -16,3 +16,9 @@ install(DIRECTORY resource
 catkin_install_python(PROGRAMS scripts/action_server_monitor
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+if (CATKIN_ENABLE_TESTING)
+  catkin_install_python(PROGRAMS test/mock_client.py test/mock_server.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  )
+endif()

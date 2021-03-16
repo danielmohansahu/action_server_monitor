@@ -1,0 +1,17 @@
+<launch>
+
+
+  <!-- launch a couple of mock servers -->
+  <node name="mock_server_1" pkg="action_server_monitor" type="mock_server.py"
+        args="-n foo" output="screen" />
+  <node name="mock_server_2" pkg="action_server_monitor" type="mock_server.py"
+        args="-n bar" output="screen" ns="nested" />
+
+  <!-- launch a couple of mock clients -->
+  <node name="mock_client_1" pkg="action_server_monitor" type="mock_client.py"
+        args="-s foo" output="screen" />
+  <node name="mock_client_2" pkg="action_server_monitor" type="mock_client.py"
+        args="-s bar" output="screen" ns="nested" />
+
+
+</launch>
