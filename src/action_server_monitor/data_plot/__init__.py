@@ -98,7 +98,7 @@ class DataPlot(QWidget):
         """
         super(DataPlot, self).__init__(parent)
         self._color_index = 0
-        self._markers_on = False
+        self._markers_on = True
         self._autoscroll = True
 
         self._autoscale_x = True

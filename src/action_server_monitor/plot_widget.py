@@ -41,9 +41,9 @@ from python_qt_binding.QtWidgets import QAction, QMenu, QWidget
 
 import rospy
 
-from rqt_py_common.topic_completer import TopicCompleter
 from rqt_py_common import topic_helpers
 
+from . status_completer import StatusCompleter
 from . rosplot import ROSData, RosPlotException
 
 
@@ -138,9 +138,9 @@ class PlotWidget(QWidget):
         if start_paused:
             self.pause_button.setChecked(True)
 
-        self._topic_completer = TopicCompleter(self.topic_edit)
-        self._topic_completer.update_topics()
-        self.topic_edit.setCompleter(self._topic_completer)
+        self._status_completer = StatusCompleter(self.topic_edit)
+        self._status_completer.update_topics()
+        self.topic_edit.setCompleter(self._status_completer)
 
         self._start_time = rospy.get_time()
         self._rosdata = {}
@@ -214,7 +214,7 @@ class PlotWidget(QWidget):
     def on_topic_edit_textChanged(self, topic_name):
         # on empty topic name, update topics
         if topic_name in ('', '/'):
-            self._topic_completer.update_topics()
+            self._status_completer.update_topics()
 
         plottable, message = is_plottable(topic_name)
         self.subscribe_topic_button.setEnabled(plottable)
