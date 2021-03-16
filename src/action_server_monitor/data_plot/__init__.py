@@ -466,7 +466,7 @@ class DataPlot(QWidget):
             return self._data_plot_widget.get_xlim()
         else:
             qWarning("No plot widget; returning default X limits")
-            return [0.0, 1.0]
+            return [0.0, 10.0]
 
     def set_xlim(self, limits):
         """set X limits"""

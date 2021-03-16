@@ -19,7 +19,7 @@ class SpasticClient(object):
             raise RuntimeError("Failed to connect to server {}".format(server_name))
 
     def sendGoal(self, block=False):
-        goal = actionlib_tutorials.msg.FibonacciGoal(order=random.randint(0,1000))
+        goal = actionlib_tutorials.msg.FibonacciGoal(order=random.randint(0,100))
         self._client.send_goal(goal)
 
         if block:

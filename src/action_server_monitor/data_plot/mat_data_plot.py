@@ -136,6 +136,11 @@ class MatDataPlot(QWidget):
         vbox.addWidget(self._canvas)
         self.setLayout(vbox)
 
+        # hardcoded limits (bad practice!)
+        self.static_ylim = [-2,10]
+        self.set_ylim(self.static_ylim)
+        self.x_scale = 10
+        
         self._curves = {}
         self._current_vline = None
         self._canvas.mpl_connect('button_release_event', self._limits_changed)
@@ -198,4 +203,4 @@ class MatDataPlot(QWidget):
         return list(self._canvas.axes.get_xbound())
 
     def get_ylim(self):
-        return list(self._canvas.axes.get_ybound())
+        return self.static_ylim
