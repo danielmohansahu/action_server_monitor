@@ -112,7 +112,7 @@ class PlotWidget(QWidget):
         if topic_name in ('', '/'):
             self._status_completer.update_topics()
 
-        plottable, message = self._statusdata.is_valid(topic_name)
+        plottable, message = StatusData.is_valid(topic_name)
         self.subscribe_topic_button.setEnabled(plottable)
         self.subscribe_topic_button.setToolTip(message)
 
@@ -148,7 +148,7 @@ class PlotWidget(QWidget):
                     if data_x or data_y:
                         self.data_plot.update_values(topic_name, data_x, data_y)
                         needs_redraw = True
-                except RosPlotException as e:
+                except StatusPlotException as e:
                     qWarning('PlotWidget.update_plot(): error in rosplot: %s' % e)
             if needs_redraw:
                 self.data_plot.redraw()
@@ -181,7 +181,7 @@ class PlotWidget(QWidget):
         topics_changed = False
 
         # check if we're already tracking this message
-        if topic_name in self._rosdata:
+        if topic_name in self._statusdata:
             qWarning('PlotWidget.add_topic(): topic already subscribed: %s' % topic_name)
             return
 
