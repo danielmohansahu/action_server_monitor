@@ -33,7 +33,6 @@
 from rqt_gui_py.plugin import Plugin
 
 from action_server_monitor.widgets.plot_widget import PlotWidget
-from action_server_monitor.widgets.data_plot import DataPlot
 
 class Plot(Plugin):
     """ Core RQT Plugin
@@ -50,8 +49,6 @@ class Plot(Plugin):
         # @TODO clean up the intermixing of operations here; it's not clear which 
         #       object is supposed to do what.
         self._widget = PlotWidget()
-        self._data_plot = DataPlot(self._widget)
-        self._widget.switch_data_plot_widget(self._data_plot)
 
         # set widget title
         if context.serial_number() > 1:

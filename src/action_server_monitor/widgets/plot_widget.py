@@ -45,66 +45,49 @@ from rqt_py_common import topic_helpers
 
 from action_server_monitor.goal_status.status_completer import StatusCompleter
 from action_server_monitor.goal_status.statusplot import StatusData, StatusPlotException
+from action_server_monitor.widgets.data_plot import DataPlot
 
 class PlotWidget(QWidget):
     _redraw_interval = 40
 
-    def __init__(self, initial_topics=None, start_paused=False):
+    def __init__(self):
+        # initialize base widget class
         super(PlotWidget, self).__init__()
         self.setObjectName('PlotWidget')
 
-        self._initial_topics = initial_topics
-
+        # load base UI
         rp = rospkg.RosPack()
         ui_file = os.path.join(rp.get_path('action_server_monitor'), 'resource', 'plot.ui')
         loadUi(ui_file, self)
+
+        # update button pictures
         self.subscribe_topic_button.setIcon(QIcon.fromTheme('list-add'))
         self.remove_topic_button.setIcon(QIcon.fromTheme('list-remove'))
         self.pause_button.setIcon(QIcon.fromTheme('media-playback-pause'))
         self.clear_button.setIcon(QIcon.fromTheme('edit-clear'))
-        self.data_plot = None
 
+        # update button initial states
+        self._remove_topic_menu = QMenu()
         self.subscribe_topic_button.setEnabled(False)
-        if start_paused:
-            self.pause_button.setChecked(True)
 
+        # initialize StatusCompleter: helps auto-correct valid topics for the user.
+        #  and add to the edit line
         self._status_completer = StatusCompleter(self.topic_edit)
         self._status_completer.update_topics()
         self.topic_edit.setCompleter(self._status_completer)
 
+        # initialize some other objects
         self._start_time = rospy.get_time()
         self._statusdata = {}
-        self._remove_topic_menu = QMenu()
+
+        # initialize our embedded plot widget (the actual lines)
+        self.data_plot = DataPlot(self)
+        self.data_plot_layout.addWidget(self.data_plot)
+        self.data_plot.autoscroll(self.autoscroll_checkbox.isChecked())
 
         # init and start update timer for plot
         self._update_plot_timer = QTimer(self)
         self._update_plot_timer.timeout.connect(self.update_plot)
-
-    def switch_data_plot_widget(self, data_plot):
-        self.enable_timer(enabled=False)
-
-        self.data_plot_layout.removeWidget(self.data_plot)
-        if self.data_plot is not None:
-            self.data_plot.close()
-
-        self.data_plot = data_plot
-        self.data_plot_layout.addWidget(self.data_plot)
-        self.data_plot.autoscroll(self.autoscroll_checkbox.isChecked())
-
-        # setup drag 'n drop
-        self.data_plot.dropEvent = self.dropEvent
-        self.data_plot.dragEnterEvent = self.dragEnterEvent
-
-        if self._initial_topics:
-            for topic_name in self._initial_topics:
-                self.add_topic(topic_name)
-            self._initial_topics = None
-        else:
-            for topic_name, rosdata in self._statusdata.items():
-                data_x, data_y = rosdata.next()
-                self.data_plot.add_curve(topic_name, topic_name, data_x, data_y)
-
-        self._subscribed_topics_changed()
 
     @Slot(str)
     def on_topic_edit_textChanged(self, topic_name):
