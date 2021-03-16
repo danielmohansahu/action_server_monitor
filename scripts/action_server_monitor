@@ -7,4 +7,4 @@ from action_server_monitor.plot import Plot
 
 plugin = 'action_server_monitor.plot.Plot'
 main = Main(filename=plugin)
-sys.exit(main.main(standalone=plugin, plugin_argument_provider=Plot.add_arguments))
+sys.exit(main.main(standalone=plugin))

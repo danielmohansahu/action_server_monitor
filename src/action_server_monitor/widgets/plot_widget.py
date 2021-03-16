@@ -43,8 +43,8 @@ import rospy
 
 from rqt_py_common import topic_helpers
 
-from . status_completer import StatusCompleter
-from . statusplot import StatusData, StatusPlotException
+from action_server_monitor.goal_status.status_completer import StatusCompleter
+from action_server_monitor.goal_status.statusplot import StatusData, StatusPlotException
 
 class PlotWidget(QWidget):
     _redraw_interval = 40
