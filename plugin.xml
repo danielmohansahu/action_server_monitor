@@ -1,7 +1,7 @@
 <library path="src">
-  <class name="Plot" type="rqt_plot.plot.Plot" base_class_type="rqt_gui_py::Plugin">
+  <class name="ServerMonitor" type="action_server_monitor.plot.Plot" base_class_type="rqt_gui_py::Plugin">
     <description>
-      A plugin visualizing numeric values in a 2D plot using different plotting backends.
+      A plugin visualizing action server statuses.
     </description>
     <qtgui>
       <group>
@@ -9,9 +9,9 @@
         <icon type="theme">folder</icon>
         <statustip>Plugins related to visualization.</statustip>
       </group>
-      <label>Plot</label>
+      <label>ServerMonitor</label>
       <icon type="theme">utilities-system-monitor</icon>
-      <statustip>A plugin for visualizing numeric values in a 2D plot using different plotting backends.</statustip>
+      <statustip>A plugin visualizing action server statuses.</statustip>
     </qtgui>
   </class>
 </library>

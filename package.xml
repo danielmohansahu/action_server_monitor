@@ -1,20 +1,21 @@
 <package format="3">
-  <name>rqt_plot</name>
-  <version>0.4.13</version>
-  <description>rqt_plot provides a GUI plugin visualizing numeric values in a 2D plot using different plotting backends.</description>
-  <maintainer email="mabel@openrobotics.org">Mabel Zhang</maintainer>
-  <maintainer email="logans@cottsay.net">Scott K Logan</maintainer>
-  <maintainer email="scholz@sim.tu-darmstadt.de">Dorian Scholz</maintainer>
-  <maintainer email="namniart@gmail.com">Austin Hendrix</maintainer>
+  <name>action_server_monitor</name>
+  <version>0.1.0</version>
+  <description>
+    ActionServerMonitor provides an RQT GUI for tracking multiple action servers.
+    Adapted from https://github.com/ros-visualization/rqt_plot
+  </description>
+  <maintainer email="danielmohansahu@gmail.com">Daniel M. Sahu</maintainer>
 
   <license>BSD</license>
 
-  <url type="website">http://wiki.ros.org/rqt_plot</url>
-  <url type="repository">https://github.com/ros-visualization/rqt_plot</url>
-  <url type="bugtracker">https://github.com/ros-visualization/rqt_plot/issues</url>
-
+  <author email="danielmohansahu@gmail.com">Daniel M. Sahu</author>
   <author>Dorian Scholz</author>
   <author email="dthomas@osrfoundation.org">Dirk Thomas</author>
+  <author email="mabel@openrobotics.org">Mabel Zhang</author>
+  <author email="logans@cottsay.net">Scott K Logan</author>
+  <author email="scholz@sim.tu-darmstadt.de">Dorian Scholz</author>
+  <author email="namniart@gmail.com">Austin Hendrix</author>
 
   <buildtool_depend>catkin</buildtool_depend>
 
