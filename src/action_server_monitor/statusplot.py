@@ -41,10 +41,12 @@ import rosgraph
 import roslib.message
 import roslib.names
 import rospy
+
+from rqt_py_common import topic_helpers
+
 from std_msgs.msg import Bool
 
-
-class RosPlotException(Exception):
+class StatusPlotException(Exception):
     pass
 
 
@@ -60,7 +62,7 @@ def _get_topic_type(topic):
         master = rosgraph.Master('/rosplot')
         val = master.getTopicTypes()
     except:
-        raise RosPlotException("unable to get list of topics from master")
+        raise StatusPlotException("unable to get list of topics from master")
     matches = [(t, t_type) for t, t_type in val if t == topic or topic.startswith(t + '/')]
     if matches:
         t, t_type = matches[0]
@@ -87,10 +89,10 @@ def get_topic_type(topic):
         return None, None, None
 
 
-class ROSData(object):
+class StatusData(object):
 
     """
-    Subscriber to ROS topic that buffers incoming data
+    Subscriber to actionlib_msgs/GoalStatusArray topic that buffers incoming data
     """
 
     def __init__(self, topic, start_time):
@@ -108,7 +110,17 @@ class ROSData(object):
             data_class = roslib.message.get_message_class(topic_type)
             self.sub = rospy.Subscriber(real_topic, data_class, self._ros_cb)
         else:
-            self.error = RosPlotException("Can not resolve topic type of %s" % topic)
+            self.error = StatusPlotException("Can not resolve topic type of %s" % topic)
+
+    @staticmethod
+    def is_valid(topic_name):
+        """ Returns True if the topic is a actionlib_msgs/GoalStatusArray, False if not.
+        """
+        topic_type, _, _ = topic_helpers.get_topic_type(topic_name)
+        if topic_type == "actionlib_msgs/GoalStatusArray":
+            return True, ""
+        else:
+            return False, "Topic {} is not an 'actionlib_msgs/GoalStatusArray'".format(topic_type)
 
     def close(self):
         self.sub.unregister()
@@ -129,7 +141,7 @@ class ROSData(object):
                     self.buff_x.append(rospy.get_time() - self.start_time)
                 # self.axes[index].plot(datax, buff_y)
             except AttributeError as e:
-                self.error = RosPlotException("Invalid topic spec [%s]: %s" % (self.name, str(e)))
+                self.error = StatusPlotException("Invalid topic spec [%s]: %s" % (self.name, str(e)))
         finally:
             self.lock.release()
 
@@ -163,10 +175,10 @@ class ROSData(object):
                 val = f(val)
             return float(val)
         except IndexError:
-            self.error = RosPlotException(
+            self.error = StatusPlotException(
                 "[%s] index error for: %s" % (self.name, str(val).replace('\n', ', ')))
         except TypeError:
-            self.error = RosPlotException("[%s] value was not numeric: %s" % (self.name, val))
+            self.error = StatusPlotException("[%s] value was not numeric: %s" % (self.name, val))
 
 
 def _array_eval(field_name, slot_num):
@@ -203,4 +215,4 @@ def generate_field_evals(fields):
                 evals.append(_field_eval(f))
         return evals
     except Exception as e:
-        raise RosPlotException("cannot parse field reference [%s]: %s" % (fields, str(e)))
+        raise StatusPlotException("cannot parse field reference [%s]: %s" % (fields, str(e)))
