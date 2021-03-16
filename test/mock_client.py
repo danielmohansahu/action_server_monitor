@@ -13,7 +13,7 @@ import actionlib_tutorials.msg
 
 class SpasticClient(object):
 
-    def __init__(self, server_name)
+    def __init__(self, server_name):
         self._client = actionlib.SimpleActionClient(server_name, actionlib_tutorials.msg.FibonacciAction)
         self._client.wait_for_server()
 
@@ -24,12 +24,12 @@ class SpasticClient(object):
         if block:
             self._client.wait_for_result()
 
-    def sendCancel(self)
+    def sendCancel(self):
         self._client.cancel_goal()
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Mock Actionlib Client.')
-    parser.add_argument("-s", "--server", type=str, default="fibonacci"
+    parser.add_argument("-s", "--server", type=str, default="fibonacci",
                         help='the action server to connect with')
     args,_ = parser.parse_known_args()
     return args

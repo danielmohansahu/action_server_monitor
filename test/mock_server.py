@@ -54,7 +54,7 @@ class MockAction(object):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Mock Actionlib Server.')
-    parser.add_argument("-n", "--name", type=str, default="fibonacci"
+    parser.add_argument("-n", "--name", type=str, default="fibonacci",
                         help='the action server name')
     args,_ = parser.parse_known_args()
     return args
