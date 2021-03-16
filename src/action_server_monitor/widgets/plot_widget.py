@@ -32,22 +32,21 @@
 
 import os
 import rospkg
-import roslib
 
 from python_qt_binding import loadUi
-from python_qt_binding.QtCore import Qt, QTimer, qWarning, Slot
+from python_qt_binding.QtCore import QTimer, qWarning, Slot
 from python_qt_binding.QtGui import QIcon
 from python_qt_binding.QtWidgets import QAction, QMenu, QWidget
 
 import rospy
-
-from rqt_py_common import topic_helpers
 
 from action_server_monitor.goal_status.status_completer import StatusCompleter
 from action_server_monitor.goal_status.statusplot import StatusData, StatusPlotException
 from action_server_monitor.widgets.data_plot import DataPlot
 
 class PlotWidget(QWidget):
+    """ This QWidget handles the callbacks for all buttons in the GUI and passes callbacks to the Data class.
+    """
     _redraw_interval = 40
 
     def __init__(self):
