@@ -95,6 +95,7 @@ class PlotWidget(QWidget):
         if topic_name in ('', '/'):
             self._status_completer.update_topics()
 
+        # check if this is a valid topic
         plottable, message = StatusData.is_valid(topic_name)
         self.subscribe_topic_button.setEnabled(plottable)
         self.subscribe_topic_button.setToolTip(message)
@@ -122,21 +123,8 @@ class PlotWidget(QWidget):
     def on_clear_button_clicked(self):
         self.clear_plot()
 
-    def update_plot(self):
-        if self.data_plot is not None:
-            needs_redraw = False
-            for topic_name, rosdata in self._statusdata.items():
-                try:
-                    data_x, data_y = rosdata.next()
-                    if data_x or data_y:
-                        self.data_plot.update_values(topic_name, data_x, data_y)
-                        needs_redraw = True
-                except StatusPlotException as e:
-                    qWarning('PlotWidget.update_plot(): error in rosplot: %s' % e)
-            if needs_redraw:
-                self.data_plot.redraw()
-
     def _subscribed_topics_changed(self):
+        # update relevant widgets
         self._update_remove_topic_menu()
         if not self.pause_button.isChecked():
             # if pause button is not pressed, enable timer based on subscribed topics
@@ -160,9 +148,24 @@ class PlotWidget(QWidget):
 
         self.remove_topic_button.setMenu(self._remove_topic_menu)
 
-    def add_topic(self, topic_name):
-        topics_changed = False
+    def update_plot(self):
+        """ Core update callback; called on a Timer.
+        """
+        needs_redraw = False
+        for topic_name, rosdata in self._statusdata.items():
+            try:
+                data_x, data_y = rosdata.next()
+                if data_x or data_y:
+                    self.data_plot.update_values(topic_name, data_x, data_y)
+                    needs_redraw = True
+            except StatusPlotException as e:
+                qWarning('PlotWidget.update_plot(): error in rosplot: %s' % e)
+        if needs_redraw:
+            self.data_plot.redraw()
 
+    def add_topic(self, topic_name):
+        """ Attempt to add a new topic to the tracked list.
+        """
         # check if we're already tracking this message
         if topic_name in self._statusdata:
             qWarning('PlotWidget.add_topic(): topic already subscribed: %s' % topic_name)
@@ -175,12 +178,11 @@ class PlotWidget(QWidget):
         else:
             data_x, data_y = self._statusdata[topic_name].next()
             self.data_plot.add_curve(topic_name, topic_name, data_x, data_y)
-            topics_changed = True
-
-        if topics_changed:
             self._subscribed_topics_changed()
 
     def remove_topic(self, topic_name):
+        """ Remove the given topic from our tracked list.
+        """
         self._statusdata[topic_name].close()
         del self._statusdata[topic_name]
         self.data_plot.remove_curve(topic_name)
@@ -188,19 +190,24 @@ class PlotWidget(QWidget):
         self._subscribed_topics_changed()
 
     def clear_plot(self):
-        for topic_name, _ in self._statusdata.items():
+        """ Clear the plot and start from scratch.
+        """
+        for topic_name in self._statusdata.keys():
             self.data_plot.clear_values(topic_name)
         self.data_plot.redraw()
 
     def clean_up_subscribers(self):
-        for topic_name, rosdata in self._statusdata.items():
-            rosdata.close()
+        """ Shut down all subscriber objects.
+        """
+        for topic_name, status_subscriber in self._statusdata.items():
+            status_subscriber.close()
             self.data_plot.remove_curve(topic_name)
         self._statusdata = {}
-
         self._subscribed_topics_changed()
 
     def enable_timer(self, enabled=True):
+        """ Start or Stop plot updating.
+        """
         if enabled:
             self._update_plot_timer.start(self._redraw_interval)
         else:
