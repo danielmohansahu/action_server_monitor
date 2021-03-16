@@ -15,11 +15,12 @@ class SpasticClient(object):
 
     def __init__(self, server_name):
         self._client = actionlib.SimpleActionClient(server_name, actionlib_tutorials.msg.FibonacciAction)
-        self._client.wait_for_server()
+        if not self._client.wait_for_server(rospy.Duration(10.0)):
+            raise RuntimeError("Failed to connect to server {}".format(server_name))
 
     def sendGoal(self, block=False):
-        goal = actionlib_tutorials.msg.FibonacciGoal(order=random.randint(1000))
-        self._client.send_goal()
+        goal = actionlib_tutorials.msg.FibonacciGoal(order=random.randint(0,1000))
+        self._client.send_goal(goal)
 
         if block:
             self._client.wait_for_result()
@@ -29,7 +30,7 @@ class SpasticClient(object):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Mock Actionlib Client.')
-    parser.add_argument("-s", "--server", type=str, default="fibonacci",
+    parser.add_argument("-s", "--server-name", type=str, default="fibonacci",
                         help='the action server to connect with')
     args,_ = parser.parse_known_args()
     return args
@@ -43,7 +44,7 @@ if __name__ == '__main__':
 
     # initialize node
     rospy.init_node('fibonacci_client_py')
-    client = SpasticClient(args.server)
+    client = SpasticClient(args.server_name)
 
     # send random goals / cancels until shutdown
     while not rospy.is_shutdown():

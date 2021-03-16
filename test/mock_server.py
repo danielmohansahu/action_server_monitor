@@ -54,7 +54,7 @@ class MockAction(object):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Mock Actionlib Server.')
-    parser.add_argument("-n", "--name", type=str, default="fibonacci",
+    parser.add_argument("-s", "--server-name", type=str, default="fibonacci",
                         help='the action server name')
     args,_ = parser.parse_known_args()
     return args
@@ -62,7 +62,7 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    rospy.init_node(args.name)
-    server = FibonacciAction(rospy.get_name())
+    rospy.init_node("mock_server")
+    server = MockAction(args.server_name)
     rospy.spin()
  
