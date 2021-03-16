@@ -44,50 +44,10 @@ import rospy
 
 from rqt_py_common import topic_helpers
 
-from std_msgs.msg import Bool
+from actionlib_msgs.msg import GoalStatusArray
 
 class StatusPlotException(Exception):
     pass
-
-
-def _get_topic_type(topic):
-    """
-    subroutine for getting the topic type
-    (nearly identical to rostopic._get_topic_type, except it returns rest of name instead of fn)
-
-    :returns: topic type, real topic name, and rest of name referenced
-      if the topic points to a field within a topic, e.g. /rosout/msg, ``str, str, str``
-    """
-    try:
-        master = rosgraph.Master('/rosplot')
-        val = master.getTopicTypes()
-    except:
-        raise StatusPlotException("unable to get list of topics from master")
-    matches = [(t, t_type) for t, t_type in val if t == topic or topic.startswith(t + '/')]
-    if matches:
-        t, t_type = matches[0]
-        if t_type == roslib.names.ANYTYPE:
-            return None, None, None
-        if t_type == topic:
-            return t_type, None
-        return t_type, t, topic[len(t):]
-    else:
-        return None, None, None
-
-
-def get_topic_type(topic):
-    """
-    Get the topic type (nearly identical to rostopic.get_topic_type, except it doesn't return a fn)
-
-    :returns: topic type, real topic name, and rest of name referenced
-      if the \a topic points to a field within a topic, e.g. /rosout/msg, ``str, str, str``
-    """
-    topic_type, real_topic, rest = _get_topic_type(topic)
-    if topic_type:
-        return topic_type, real_topic, rest
-    else:
-        return None, None, None
-
 
 class StatusData(object):
 
@@ -103,14 +63,11 @@ class StatusData(object):
         self.lock = threading.Lock()
         self.buff_x = []
         self.buff_y = []
+        
+        # sanity check we're given something reasonable
+        assert(self.is_valid(topic))
 
-        topic_type, real_topic, fields = get_topic_type(topic)
-        if topic_type is not None:
-            self.field_evals = generate_field_evals(fields)
-            data_class = roslib.message.get_message_class(topic_type)
-            self.sub = rospy.Subscriber(real_topic, data_class, self._ros_cb)
-        else:
-            self.error = StatusPlotException("Can not resolve topic type of %s" % topic)
+        self.sub = rospy.Subscriber(topic, GoalStatusArray, self._ros_cb)
 
     @staticmethod
     def is_valid(topic_name):
@@ -128,22 +85,18 @@ class StatusData(object):
     def _ros_cb(self, msg):
         """
         ROS subscriber callback
-        :param msg: ROS message data
+        :param msg: GoalStatusArray callback
         """
-        try:
-            self.lock.acquire()
-            try:
-                self.buff_y.append(self._get_data(msg))
-                # 944: use message header time if present
-                if msg.__class__._has_header:
-                    self.buff_x.append(msg.header.stamp.to_sec() - self.start_time)
-                else:
-                    self.buff_x.append(rospy.get_time() - self.start_time)
-                # self.axes[index].plot(datax, buff_y)
-            except AttributeError as e:
-                self.error = StatusPlotException("Invalid topic spec [%s]: %s" % (self.name, str(e)))
-        finally:
-            self.lock.release()
+        # parse out the latest status (or set to -1 if empty)
+        x = msg.header.stamp.to_sec() - self.start_time
+        y = -1
+        if len(msg.status_list) > 0:
+            y = msg.status_list[-1].status
+
+        # add it to our queue
+        with self.lock:
+            self.buff_x.append(x)
+            self.buff_y.append(y)
 
     def next(self):
         """
@@ -153,66 +106,11 @@ class StatusData(object):
         """
         if self.error:
             raise self.error
-        try:
-            self.lock.acquire()
+
+        with self.lock:
             buff_x = self.buff_x
             buff_y = self.buff_y
             self.buff_x = []
             self.buff_y = []
-        finally:
-            self.lock.release()
+
         return buff_x, buff_y
-
-    def _get_data(self, msg):
-        val = msg
-        try:
-            if not self.field_evals:
-                if isinstance(val, Bool):
-                    # extract boolean field from bool messages
-                    val = val.data
-                return float(val)
-            for f in self.field_evals:
-                val = f(val)
-            return float(val)
-        except IndexError:
-            self.error = StatusPlotException(
-                "[%s] index error for: %s" % (self.name, str(val).replace('\n', ', ')))
-        except TypeError:
-            self.error = StatusPlotException("[%s] value was not numeric: %s" % (self.name, val))
-
-
-def _array_eval(field_name, slot_num):
-    """
-    :param field_name: name of field to index into, ``str``
-    :param slot_num: index of slot to return, ``str``
-    :returns: fn(msg_field)->msg_field[slot_num]
-    """
-    def fn(f):
-        return getattr(f, field_name).__getitem__(slot_num)
-    return fn
-
-
-def _field_eval(field_name):
-    """
-    :param field_name: name of field to return, ``str``
-    :returns: fn(msg_field)->msg_field.field_name
-    """
-    def fn(f):
-        return getattr(f, field_name)
-    return fn
-
-
-def generate_field_evals(fields):
-    try:
-        evals = []
-        fields = [f for f in fields.split('/') if f]
-        for f in fields:
-            if '[' in f:
-                field_name, rest = f.split('[')
-                slot_num = int(rest[:rest.find(']')])
-                evals.append(_array_eval(field_name, slot_num))
-            else:
-                evals.append(_field_eval(f))
-        return evals
-    except Exception as e:
-        raise StatusPlotException("cannot parse field reference [%s]: %s" % (fields, str(e)))
