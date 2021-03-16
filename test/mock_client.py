@@ -50,9 +50,11 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         if random.random() > 0.75:
             # send a new goal
+            rospy.loginfo("Sending new goal to {}".format(args.server_name))
             client.sendGoal(block = random.random() > 0.1)
         elif random.random() < 0.25:
             # send a cancel
+            rospy.loginfo("Sending cancel to {}".format(args.server_name))
             client.sendCancel()
 
         # sleep some random amount of time

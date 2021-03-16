@@ -4,6 +4,7 @@
 Shamelessly copied from the actionlib_tutorials Tutorial.
 """
 
+import random
 import argparse
 import rospy
 import actionlib
@@ -22,30 +23,32 @@ class MockAction(object):
       
     def execute_cb(self, goal):
         # helper variables
-        r = rospy.Rate(0.01)
         success = True
         
         # append the seeds for the fibonacci sequence
         self._feedback.sequence = []
         self._feedback.sequence.append(0)
-        self._feedback.sequence.append(1)
         
         # publish info to the console for the user
-        rospy.loginfo('%s: Executing, creating fibonacci sequence of order %i with seeds %i, %i' % (self._action_name, goal.order, self._feedback.sequence[0], self._feedback.sequence[1]))
+        rospy.loginfo('%s: Executing')
         
         # start executing the action
-        for i in range(1, goal.order):
+        count = 0
+        while not rospy.is_shutdown() and count <= goal.order:
             # check that preempt has not been requested by the client
             if self._as.is_preempt_requested():
                 rospy.loginfo('%s: Preempted' % self._action_name)
                 self._as.set_preempted()
                 success = False
                 break
-            self._feedback.sequence.append(self._feedback.sequence[i] + self._feedback.sequence[i-1])
+
             # publish the feedback
             self._as.publish_feedback(self._feedback)
             # this step is not necessary, the sequence is computed at 1 Hz for demonstration purposes
-            r.sleep()
+            rospy.logdebug("Server sleeping...")
+            rospy.sleep(random.random()*0.1)
+
+            count += 1
           
         if success:
             self._result.sequence = self._feedback.sequence
@@ -61,6 +64,7 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    random.seed()
 
     rospy.init_node("mock_server")
     server = MockAction(args.server_name)
