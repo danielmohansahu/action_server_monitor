@@ -141,7 +141,7 @@ class DataPlot(QWidget):
         for topic_value in self._curves.values():
             for goal_value in topic_value["goals"].values():
                 # here we check if the given curve should be dropped (i.e. if we have no data within our visible range for it)
-                if numpy.max(goal_value['x']) < (self._x_limits[0] - self._dropwidth):
+                if len(goal_value['x']) != 0 and numpy.max(goal_value['x']) < (self._x_limits[0] - self._dropwidth):
                     # delete this curve
                     self._data_plot_widget.remove_curve(goal_value["name"])
                 else:
