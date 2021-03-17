@@ -41,7 +41,7 @@ from python_qt_binding.QtWidgets import QAction, QMenu, QWidget
 import rospy
 
 from action_server_monitor.goal_status.status_completer import StatusCompleter
-from action_server_monitor.goal_status.statusplot import StatusData, StatusPlotException
+from action_server_monitor.goal_status.status_tracker import StatusTracker, StatusTrackerException
 from action_server_monitor.widgets.data_plot import DataPlot
 
 class PlotWidget(QWidget):
@@ -77,7 +77,7 @@ class PlotWidget(QWidget):
 
         # initialize some other objects
         self._start_time = rospy.get_time()
-        self._statusdata = {}
+        self._tracked_topics = {}
 
         # initialize our embedded plot widget (the actual lines)
         self.data_plot = DataPlot(self)
@@ -96,7 +96,7 @@ class PlotWidget(QWidget):
             self._status_completer.update_topics()
 
         # check if this is a valid topic
-        plottable, message = StatusData.is_valid(topic_name)
+        plottable, message = StatusTracker.is_valid(topic_name)
         self.subscribe_topic_button.setEnabled(plottable)
         self.subscribe_topic_button.setToolTip(message)
 
@@ -133,7 +133,7 @@ class PlotWidget(QWidget):
         self._update_remove_topic_menu()
         if not self.pause_button.isChecked():
             # if pause button is not pressed, enable timer based on subscribed topics
-            self.enable_timer(self._statusdata)
+            self.enable_timer(self._tracked_topics)
         self.data_plot.redraw()
 
     def _update_remove_topic_menu(self):
@@ -141,12 +141,12 @@ class PlotWidget(QWidget):
             return lambda: self.remove_topic(x)
 
         self._remove_topic_menu.clear()
-        for topic_name in sorted(self._statusdata.keys()):
+        for topic_name in sorted(self._tracked_topics.keys()):
             action = QAction(topic_name, self._remove_topic_menu)
             action.triggered.connect(make_remove_topic_function(topic_name))
             self._remove_topic_menu.addAction(action)
 
-        if len(self._statusdata) > 1:
+        if len(self._tracked_topics) > 1:
             all_action = QAction('All', self._remove_topic_menu)
             all_action.triggered.connect(self.clean_up_subscribers)
             self._remove_topic_menu.addAction(all_action)
@@ -157,13 +157,13 @@ class PlotWidget(QWidget):
         """ Core update callback; called on a Timer.
         """
         needs_redraw = False
-        for topic_name, rosdata in self._statusdata.items():
+        for topic_name, tracker in self._tracked_topics.items():
             try:
-                data_x, data_y = rosdata.next()
-                if data_x or data_y:
-                    self.data_plot.update_values(topic_name, data_x, data_y)
+                data = tracker.next()
+                if data:
+                    self.data_plot.update_values(topic_name, data)
                     needs_redraw = True
-            except StatusPlotException as e:
+            except StatusTrackerException as e:
                 qWarning('PlotWidget.update_plot(): error in rosplot: %s' % e)
         if needs_redraw:
             self.data_plot.redraw()
@@ -172,24 +172,28 @@ class PlotWidget(QWidget):
         """ Attempt to add a new topic to the tracked list.
         """
         # check if we're already tracking this message
-        if topic_name in self._statusdata:
+        if topic_name in self._tracked_topics:
             qWarning('PlotWidget.add_topic(): topic already subscribed: %s' % topic_name)
             return
 
-        self._statusdata[topic_name] = StatusData(topic_name, self._start_time)
-        if self._statusdata[topic_name].error is not None:
-            qWarning(str(self._statusdata[topic_name].error))
-            del self._statusdata[topic_name]
+        # if we're adding a new tracker (i.e. 0->1) we should reset the start time
+        if len(self._tracked_topics) == 0:
+            self._start_time = rospy.get_time()
+
+        self._tracked_topics[topic_name] = StatusTracker(topic_name, self._start_time)
+        if self._tracked_topics[topic_name].error is not None:
+            qWarning(str(self._tracked_topics[topic_name].error))
+            del self._tracked_topics[topic_name]
         else:
-            data_x, data_y = self._statusdata[topic_name].next()
-            self.data_plot.add_curve(topic_name, topic_name, data_x, data_y)
+            data = self._tracked_topics[topic_name].next()
+            self.data_plot.add_curve(topic_name, topic_name, data)
             self._subscribed_topics_changed()
 
     def remove_topic(self, topic_name):
         """ Remove the given topic from our tracked list.
         """
-        self._statusdata[topic_name].close()
-        del self._statusdata[topic_name]
+        self._tracked_topics[topic_name].close()
+        del self._tracked_topics[topic_name]
         self.data_plot.remove_curve(topic_name)
 
         self._subscribed_topics_changed()
@@ -203,10 +207,10 @@ class PlotWidget(QWidget):
     def clean_up_subscribers(self):
         """ Shut down all subscriber objects.
         """
-        for topic_name, status_subscriber in self._statusdata.items():
+        for topic_name, status_subscriber in self._tracked_topics.items():
             status_subscriber.close()
             self.data_plot.remove_curve(topic_name)
-        self._statusdata = {}
+        self._tracked_topics = {}
         self._subscribed_topics_changed()
 
     def enable_timer(self, enabled=True):

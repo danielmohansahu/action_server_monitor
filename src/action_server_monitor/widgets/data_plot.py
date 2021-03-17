@@ -152,7 +152,7 @@ class DataPlot(QWidget):
         else:
             raise DataPlotException("No curve named %s in this DataPlot" % (curve_id))
 
-    def add_curve(self, curve_id, curve_name, data_x, data_y):
+    def add_curve(self, curve_id, curve_name, data):
         """Add a new, named curve to this plot
 
         Add a curve named `curve_name` to the plot, with initial data series
@@ -163,6 +163,14 @@ class DataPlot(QWidget):
         Note that the plot is not redraw automatically; call `redraw()` to make
         any changes visible to the user.
         """
+        # temporarily ignore other data (to make sure upstream is working)
+        data_x = []
+        data_y = []
+        for v in data.values():
+            for m in v:
+                data_x.append(m[0])
+                data_y.append(m[1])
+
         curve_color = QColor(self._colors[self._color_index % len(self._colors)])
         self._color_index += 1
 
@@ -179,7 +187,7 @@ class DataPlot(QWidget):
             del self._curves[curve_id]
         self._data_plot_widget.remove_curve(curve_id)
 
-    def update_values(self, curve_id, values_x, values_y, sort_data=True):
+    def update_values(self, curve_id, values, sort_data=True):
         """Append new data to an existing curve
 
         `values_x` and `values_y` will be appended to the existing data for
@@ -191,6 +199,14 @@ class DataPlot(QWidget):
         If `sort_data` is set to False, values won't be sorted by `values_x`
         order.
         """
+        # temporarily ignore other data (to make sure upstream is working)
+        values_x = []
+        values_y = []
+        for v in values.values():
+            for m in v:
+                values_x.append(m[0])
+                values_y.append(m[1])
+
         curve = self._get_curve(curve_id)
         curve['x'] = numpy.append(curve['x'], values_x)
         curve['y'] = numpy.append(curve['y'], values_y)

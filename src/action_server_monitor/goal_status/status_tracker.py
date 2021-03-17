@@ -36,6 +36,7 @@
 import sys
 import threading
 import time
+from collections import defaultdict
 
 import rosgraph
 import roslib.message
@@ -46,10 +47,10 @@ from rqt_py_common import topic_helpers
 
 from actionlib_msgs.msg import GoalStatusArray
 
-class StatusPlotException(Exception):
+class StatusTrackerException(Exception):
     pass
 
-class StatusData(object):
+class StatusTracker(object):
 
     """
     Subscriber to actionlib_msgs/GoalStatusArray topic that buffers incoming data
@@ -61,8 +62,7 @@ class StatusData(object):
         self.error = None
 
         self.lock = threading.Lock()
-        self.buff_x = []
-        self.buff_y = []
+        self.buffer = defaultdict(list)
         
         # sanity check we're given something reasonable
         assert(self.is_valid(topic))
@@ -87,30 +87,33 @@ class StatusData(object):
         ROS subscriber callback
         :param msg: GoalStatusArray callback
         """
-        # parse out the latest status (or set to -1 if empty)
-        x = msg.header.stamp.to_sec() - self.start_time
-        y = -1
-        if len(msg.status_list) > 0:
-            y = msg.status_list[-1].status
+        # skip empty messages
+        if len(msg.status_list) == 0:
+            return
 
-        # add it to our queue
+        # parse out the latest statuses into a dictionary
+        stamp = msg.header.stamp.to_sec() - self.start_time
+        data = {}
+        for status in msg.status_list:
+            data[status.goal_id.id] = (stamp, status.status, status.goal_id.stamp)
+
+        # add these messages to our queue
         with self.lock:
-            self.buff_x.append(x)
-            self.buff_y.append(y)
+            for k,v in data.items():
+                self.buffer[k].append(v)
 
     def next(self):
         """
-        Get the next data in the series
+        Get the next data in the series. This is each item in the given
+         status list along with a corresponding list of timestamps.
 
-        :returns: [xdata], [ydata]
+        :returns: {goal_id: [[timestamps], [status]}
         """
         if self.error:
             raise self.error
 
         with self.lock:
-            buff_x = self.buff_x
-            buff_y = self.buff_y
-            self.buff_x = []
-            self.buff_y = []
+            buffer = dict(self.buffer)
+            self.buffer.clear()
 
-        return buff_x, buff_y
+        return buffer

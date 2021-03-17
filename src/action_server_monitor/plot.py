@@ -46,8 +46,6 @@ class Plot(Plugin):
         self.setObjectName('Plot')
 
         # instantiate core Widgets
-        # @TODO clean up the intermixing of operations here; it's not clear which 
-        #       object is supposed to do what.
         self._widget = PlotWidget()
 
         # set widget title
