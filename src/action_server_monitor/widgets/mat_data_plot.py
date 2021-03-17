@@ -95,10 +95,27 @@ class MatDataPlot(QWidget):
             super(MatDataPlot.Canvas, self).__init__(Figure())
             self.axes = self.figure.add_subplot(111)
             self.axes.grid(True, color='gray')
+
             self.safe_tight_layout()
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             self.setMinimumSize(1,1)
             self.updateGeometry()
+
+            # add message text for ticks
+            labels = [
+                "PENDING",
+                "ACTIVE",
+                "PREEMPTED",
+                "SUCCEEDED",
+                "ABORTED",
+                "REJECTED",
+                "PREEMPTING",
+                "RECALLING",
+                "RECALLED",
+                "LOST"
+            ]
+            self.axes.set_yticks(range(len(labels)))
+            self.axes.set_yticklabels(labels)
 
         def resizeEvent(self, event):
             super(MatDataPlot.Canvas, self).resizeEvent(event)
