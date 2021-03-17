@@ -83,6 +83,7 @@ class PlotWidget(QWidget):
         self.data_plot = DataPlot(self)
         self.data_plot_layout.addWidget(self.data_plot)
         self.data_plot.autoscroll(self.autoscroll_checkbox.isChecked())
+        self.data_plot.limits_changed.connect(self._limits_changed)
 
         # init and start update timer for plot
         self._update_plot_timer = QTimer(self)
@@ -121,6 +122,11 @@ class PlotWidget(QWidget):
     @Slot()
     def on_clear_button_clicked(self):
         self.clear_plot()
+
+    def _limits_changed(self):
+        # pause the system if any of the underlying limits have changed
+        if not self.pause_button.isChecked():
+            self.pause_button.click()
 
     def _subscribed_topics_changed(self):
         # update relevant widgets
@@ -191,8 +197,7 @@ class PlotWidget(QWidget):
     def clear_plot(self):
         """ Clear the plot and start from scratch.
         """
-        for topic_name in self._statusdata.keys():
-            self.data_plot.clear_values(topic_name)
+        self.data_plot.clear_values()
         self.data_plot.redraw()
 
     def clean_up_subscribers(self):

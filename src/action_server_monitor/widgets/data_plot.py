@@ -33,12 +33,9 @@
 
 import numpy
 
-from qt_gui_py_common.simple_settings_dialog import SimpleSettingsDialog
-from python_qt_binding import QT_BINDING
-from python_qt_binding.QtCore import Qt, qVersion, qWarning, Signal
+from python_qt_binding.QtCore import Qt, Signal
 from python_qt_binding.QtGui import QColor
 from python_qt_binding.QtWidgets import QWidget, QHBoxLayout
-from rqt_py_common.ini_helper import pack, unpack
 
 from .mat_data_plot import MatDataPlot
 
@@ -235,4 +232,3 @@ class DataPlot(QWidget):
 
         # update underlying axes object's limits
         self._data_plot_widget.set_xlim(self._x_limits)
-        self._data_plot_widget.set_ylim(self._static_ylimits)
