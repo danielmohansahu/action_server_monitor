@@ -31,6 +31,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from collections import defaultdict
+from threading import Lock
 from pkg_resources import parse_version
 
 from python_qt_binding import QT_BINDING, QT_BINDING_VERSION
@@ -104,7 +105,6 @@ class MatDataPlot(QWidget):
                 xytext=(20,20),
                 textcoords="offset points",
                 bbox=dict(boxstyle="round", fc="w"),
-                arrowprops=dict(arrowstyle="->")
             )
             self.set_annotation(False)
 
@@ -171,6 +171,11 @@ class MatDataPlot(QWidget):
 
     def __init__(self, parent=None):
         super(MatDataPlot, self).__init__(parent)
+
+        # thread safety
+        self._lock = Lock()
+
+        # initialize QT layout and sub-widgets
         self._canvas = MatDataPlot.Canvas()
         self._toolbar = NavigationToolbar(self._canvas, self._canvas)
         vbox = QVBoxLayout()
@@ -178,6 +183,7 @@ class MatDataPlot(QWidget):
         vbox.addWidget(self._canvas)
         self.setLayout(vbox)
         
+        # initialize data and callbacks
         self._curves = defaultdict(dict)
         self._canvas.mpl_connect('button_release_event', lambda _: self.limits_changed.emit())
         self._canvas.mpl_connect('motion_notify_event', self._hover)
@@ -190,9 +196,11 @@ class MatDataPlot(QWidget):
 
         line = self._canvas.axes.plot([], [], 'o-', markersize=marker_size, label=label,
                                       linewidth=1, picker=5, color=curve_color.name())[0]
-        self._curves[curve_id]["line"] = line
-        self._curves[curve_id]["topic"] = label
-        self._curves[curve_id]["sent"] = time_sent
+        
+        with self._lock:
+            self._curves[curve_id]["line"] = line
+            self._curves[curve_id]["topic"] = label
+            self._curves[curve_id]["sent"] = time_sent
 
         # update the plot
         self._update_legend()
@@ -200,10 +208,10 @@ class MatDataPlot(QWidget):
         self.set_ylim(y_limits)
         
     def remove_curve(self, curve_id):
-        curve_id = str(curve_id)
-        if curve_id in self._curves.keys():
-            self._curves.pop(curve_id)
-            self._update_legend()
+        with self._lock:
+            if curve_id in self._curves.keys():
+                self._curves.pop(curve_id)
+        self._update_legend()
 
     def _update_legend(self):
         handles, labels = self._canvas.axes.get_legend_handles_labels()        
@@ -218,34 +226,37 @@ class MatDataPlot(QWidget):
 
     def _hover(self, event):
         # display information about the data point under the user's cursor
-        found = False
+
+        # find which line(s) we're hovering over
+        matches = []
+        text = []
         if event.inaxes == self._canvas.axes:
-            for curve_id, vals in self._curves.items():
-                line = vals["line"]
-                contains, indices = line.contains(event)
-                if contains:
-                    # this is our line; add the annotation
-                    data_x, data_y = line.get_data()
-                    x = data_x[indices["ind"][0]]
-                    y = data_y[indices["ind"][0]]
-                    self._canvas.update_annotation(
-                        x,
-                        y,
-                        "Topic: {}\nID: {}\nSent: {:.2f}\nAge: {:.2f} s".format(
-                            vals["topic"],
-                            curve_id,
-                            vals["sent"],
-                            x - vals["sent"]
-                        ))
-                    self._canvas.set_annotation(True)
-                    found = True
-                    # @TODO how to handle multiple overlapping points?
-                    break
-        if not found:
+            with self._lock:
+                for curve_id, vals in self._curves.items():
+                    line = vals["line"]
+                    contains, indices = line.contains(event)
+                    if contains:
+                        # this is our line; add the annotation
+                        data_x, data_y = line.get_data()
+                        x = data_x[indices["ind"][0]]
+                        y = data_y[indices["ind"][0]]
+                        matches.append((x,y,vals["topic"],curve_id,vals["sent"],x-vals["sent"]))
+            # create an annotation with all matches
+            for match in matches:
+                text.append("Topic: {}\nID: {}\nSent: {:.2f}\nAge: {:.2f} s".format(*match[2:]))
+        # if we've gotten anything make it into an annotation
+        if len(matches) != 0:
+            # use the last match as our anchor point (arbitrarily)
+            x,y = matches[-1][:2]
+            text = "\n".join(text)
+            self._canvas.update_annotation(x, y, text)
+            self._canvas.set_annotation(True)
+        else:
             self._canvas.set_annotation(False)
 
     def set_values(self, curve, data_x, data_y):
-        self._curves[curve]["line"].set_data(data_x, data_y)
+        with self._lock:
+            self._curves[curve]["line"].set_data(data_x, data_y)
         
     def redraw(self):
         self._canvas.axes.grid(True, color='gray')
