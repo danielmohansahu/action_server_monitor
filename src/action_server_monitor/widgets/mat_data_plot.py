@@ -30,15 +30,9 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from pkg_resources import parse_version
+
 from python_qt_binding import QT_BINDING, QT_BINDING_VERSION
-
-try:
-    from pkg_resources import parse_version
-except:
-    import re
-
-    def parse_version(s):
-        return [int(x) for x in re.sub(r'(\.0+)*$', '', s).split('.')]
 
 if QT_BINDING == 'pyside':
     qt_binding_version = QT_BINDING_VERSION.replace('~', '-')
@@ -135,24 +129,15 @@ class MatDataPlot(QWidget):
         vbox.addWidget(self._toolbar)
         vbox.addWidget(self._canvas)
         self.setLayout(vbox)
-
-        # hardcoded limits (bad practice!)
-        self.static_ylim = [-2,10]
-        self.set_ylim(self.static_ylim)
-        self.x_scale = 10
         
         self._curves = {}
-        self._current_vline = None
-        self._canvas.mpl_connect('button_release_event', self._limits_changed)
-
-    def _limits_changed(self, event):
-        self.limits_changed.emit()
+        self._canvas.mpl_connect('button_release_event', lambda _: self.limits_changed.emit())
 
     def add_curve(self, curve_id, curve_name, curve_color=QColor(Qt.blue), markers_on=False):
 
         # adding an empty curve and change the limits, so save and restore them
-        x_limits = self.get_xlim()
-        y_limits = self.get_ylim()
+        x_limits = list(self._canvas.axes.get_xbound())
+        y_limits = list(self._canvas.axes.get_ybound())
         if markers_on:
             marker_size = 3
         else:
@@ -160,10 +145,12 @@ class MatDataPlot(QWidget):
         line = self._canvas.axes.plot([], [], 'o-', markersize=marker_size, label=curve_name,
                                       linewidth=1, picker=5, color=curve_color.name())[0]
         self._curves[curve_id] = line
+
+        # update the plot
         self._update_legend()
         self.set_xlim(x_limits)
         self.set_ylim(y_limits)
-
+        
     def remove_curve(self, curve_id):
         curve_id = str(curve_id)
         if curve_id in self._curves:
@@ -186,21 +173,8 @@ class MatDataPlot(QWidget):
         self._canvas.axes.grid(True, color='gray')
         self._canvas.draw()
 
-    def vline(self, x, color):
-        # convert color range from (0,255) to (0,1.0)
-        matcolor = (color[0] / 255.0, color[1] / 255.0, color[2] / 255.0)
-        if self._current_vline:
-            self._current_vline.remove()
-        self._current_vline = self._canvas.axes.axvline(x=x, color=matcolor)
-
     def set_xlim(self, limits):
         self._canvas.axes.set_xbound(lower=limits[0], upper=limits[1])
 
     def set_ylim(self, limits):
         self._canvas.axes.set_ybound(lower=limits[0], upper=limits[1])
-
-    def get_xlim(self):
-        return list(self._canvas.axes.get_xbound())
-
-    def get_ylim(self):
-        return self.static_ylim
