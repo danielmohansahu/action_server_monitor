@@ -95,7 +95,8 @@ class StatusTracker(object):
         stamp = msg.header.stamp.to_sec() - self.start_time
         data = {}
         for status in msg.status_list:
-            data[status.goal_id.id] = (stamp, status.status, status.goal_id.stamp)
+            sent_stamp = status.goal_id.stamp.to_sec() - self.start_time 
+            data[status.goal_id.id] = (stamp, status.status, sent_stamp)
 
         # add these messages to our queue
         with self.lock:

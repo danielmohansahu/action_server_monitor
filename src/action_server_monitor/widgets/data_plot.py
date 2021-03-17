@@ -65,7 +65,7 @@ class DataPlot(QWidget):
 
     limits_changed = Signal()
     _redraw = Signal()
-    _add_curve = Signal(str, str, 'QColor', bool)
+    _add_curve = Signal(str, str, float, 'QColor', bool)
 
     def __init__(self, parent=None):
         """Create a new, empty DataPlot
@@ -189,6 +189,10 @@ class DataPlot(QWidget):
         if topic_name in self._curves:
             # iterate through all the new goals and data
             for goal_id, data in values.items():
+                # parse data
+                new_x, new_y, time_sent = [list(v) for v in zip(*data)]
+                time_sent = max(time_sent)
+
                 # for each goal in the new values we need to check if it's new and therefore
                 #  warrants adding a new curve
                 if goal_id not in self._curves[topic_name]["goals"]:
@@ -196,12 +200,11 @@ class DataPlot(QWidget):
                         "x": numpy.array([]),
                         "y": numpy.array([]),
                         "name": goal_id,
+                        "sent": time_sent,
                         "color": self._curves[topic_name]["color"]
                     }
                     # update QT with knowledge of this new curve
-                    self._add_curve.emit(topic_name, goal_id, self._curves[topic_name]["color"], True)
-
-                new_x, new_y, _ = [list(v) for v in zip(*values[goal_id])]
+                    self._add_curve.emit(topic_name, goal_id, time_sent, self._curves[topic_name]["color"], True)
 
                 # check if this new curve has a newer X data point than we've previously seen
                 #  we use this to update our upper bound
