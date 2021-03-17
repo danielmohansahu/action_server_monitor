@@ -75,6 +75,7 @@ class DataPlot(QWidget):
         # initialize miscellaneous class variables
         self._color_index = 0
         self._scrollwidth = 10
+        self._dropwidth = 60    # drop data this much older than our window's lower bound
 
         # determine whether or not to scroll through the window (in X)
         self._autoscroll = True
@@ -139,7 +140,13 @@ class DataPlot(QWidget):
         self._merged_autoscale()
         for topic_value in self._curves.values():
             for goal_value in topic_value["goals"].values():
-                self._data_plot_widget.set_values(goal_value["name"], goal_value['x'], goal_value['y'])
+                # here we check if the given curve should be dropped (i.e. if we have no data within our visible range for it)
+                if numpy.max(goal_value['x']) < (self._x_limits[0] - self._dropwidth):
+                    # delete this curve
+                    self._data_plot_widget.remove_curve(goal_value["name"])
+                else:
+                    # update
+                    self._data_plot_widget.set_values(goal_value["name"], goal_value['x'], goal_value['y'])
         self._data_plot_widget.redraw()
 
     def add_topic(self, topic_name, data):
