@@ -186,7 +186,7 @@ class PlotWidget(QWidget):
             del self._tracked_topics[topic_name]
         else:
             data = self._tracked_topics[topic_name].next()
-            self.data_plot.add_curve(topic_name, topic_name, data)
+            self.data_plot.add_topic(topic_name, data)
             self._subscribed_topics_changed()
 
     def remove_topic(self, topic_name):
@@ -194,7 +194,7 @@ class PlotWidget(QWidget):
         """
         self._tracked_topics[topic_name].close()
         del self._tracked_topics[topic_name]
-        self.data_plot.remove_curve(topic_name)
+        self.data_plot.remove_topic(topic_name)
 
         self._subscribed_topics_changed()
 
@@ -209,7 +209,7 @@ class PlotWidget(QWidget):
         """
         for topic_name, status_subscriber in self._tracked_topics.items():
             status_subscriber.close()
-            self.data_plot.remove_curve(topic_name)
+            self.data_plot.remove_topic(topic_name)
         self._tracked_topics = {}
         self._subscribed_topics_changed()
 

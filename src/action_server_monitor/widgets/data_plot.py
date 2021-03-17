@@ -84,7 +84,7 @@ class DataPlot(QWidget):
         self._x_limits = [0, 1.0]
         self._static_ylimits = [-0.5, 9.5]
         
-        # initialize currently tracked data
+        # initialize currently tracked data ({topic: {goal_id: [timestamp, id]}})
         self._curves = {}
 
         # initialize various input signals and their callbacks and widgets
@@ -137,61 +137,40 @@ class DataPlot(QWidget):
         This causes the underlying plot to be redrawn. This is usually used
         after adding or updating the plot data"""
         self._merged_autoscale()
-        for curve_id in self._curves:
-            curve = self._curves[curve_id]
-            try:
-                self._data_plot_widget.set_values(curve_id, curve['x'], curve['y'])
-            except KeyError:
-                # skip curve which has been removed in the mean time
-                pass
+        for topic_value in self._curves.values():
+            for goal_value in topic_value["goals"].values():
+                self._data_plot_widget.set_values(goal_value["name"], goal_value['x'], goal_value['y'])
         self._data_plot_widget.redraw()
 
-    def _get_curve(self, curve_id):
-        if curve_id in self._curves:
-            return self._curves[curve_id]
-        else:
-            raise DataPlotException("No curve named %s in this DataPlot" % (curve_id))
-
-    def add_curve(self, curve_id, curve_name, data):
-        """Add a new, named curve to this plot
-
-        Add a curve named `curve_name` to the plot, with initial data series
-        `data_x` and `data_y`.
-
-        Future references to this curve should use the provided `curve_id`
+    def add_topic(self, topic_name, data):
+        """Add a new topic to this plot.
 
         Note that the plot is not redraw automatically; call `redraw()` to make
         any changes visible to the user.
         """
-        # temporarily ignore other data (to make sure upstream is working)
-        data_x = []
-        data_y = []
-        for v in data.values():
-            for m in v:
-                data_x.append(m[0])
-                data_y.append(m[1])
-
-        curve_color = QColor(self._colors[self._color_index % len(self._colors)])
+        topic_color = QColor(self._colors[self._color_index % len(self._colors)])
         self._color_index += 1
 
-        self._curves[curve_id] = {'x': numpy.array(data_x),
-                                  'y': numpy.array(data_y),
-                                  'name': curve_name,
-                                  'color': curve_color}
-        self._add_curve.emit(curve_id, curve_name, curve_color, True)
+        # initialize topic object
+        self._curves[topic_name] = {
+            "goals": {},
+            "name": topic_name,
+            "color": topic_color}
 
-    def remove_curve(self, curve_id):
+        self.update_values(topic_name, data)
+
+    def remove_topic(self, topic_name):
         """Remove the specified curve from this plot"""
-        # TODO: do on UI thread with signals
-        if curve_id in self._curves:
-            del self._curves[curve_id]
-        self._data_plot_widget.remove_curve(curve_id)
+        if topic_name in self._curves:
+            # remove all associated goal curves
+            for goal_id in self._curves[topic_name]["goals"].keys():
+                self._data_plot_widget.remove_curve(goal_id)
 
-    def update_values(self, curve_id, values, sort_data=True):
-        """Append new data to an existing curve
+            # delete this topic object
+            self._curves.pop(topic_name)
 
-        `values_x` and `values_y` will be appended to the existing data for
-        `curve_id`
+    def update_values(self, topic_name, values, sort_data=True):
+        """Append new data to an existing topic
 
         Note that the plot is not redraw automatically; call `redraw()` to make
         any changes visible to the user.
@@ -199,28 +178,41 @@ class DataPlot(QWidget):
         If `sort_data` is set to False, values won't be sorted by `values_x`
         order.
         """
-        # temporarily ignore other data (to make sure upstream is working)
-        values_x = []
-        values_y = []
-        for v in values.values():
-            for m in v:
-                values_x.append(m[0])
-                values_y.append(m[1])
+        # ignore if we aren't tracking this topic
+        if topic_name in self._curves:
+            # iterate through all the new goals and data
+            for goal_id, data in values.items():
+                # for each goal in the new values we need to check if it's new and therefore
+                #  warrants adding a new curve
+                if goal_id not in self._curves[topic_name]["goals"]:
+                    self._curves[topic_name]["goals"][goal_id] = {
+                        "x": numpy.array([]),
+                        "y": numpy.array([]),
+                        "name": goal_id,
+                        "color": self._curves[topic_name]["color"]
+                    }
+                    # update QT with knowledge of this new curve
+                    self._add_curve.emit(topic_name, goal_id, self._curves[topic_name]["color"], True)
 
-        curve = self._get_curve(curve_id)
-        curve['x'] = numpy.append(curve['x'], values_x)
-        curve['y'] = numpy.append(curve['y'], values_y)
+                new_x, new_y, _ = [list(v) for v in zip(*values[goal_id])]
 
-        # check if this new curve has a newer X data point than we've previously seen
-        curve_x_max = numpy.max(curve['x'])
-        if curve_x_max > self._x_limits[1]:
-            self._x_limits[1] = curve_x_max
+                # check if this new curve has a newer X data point than we've previously seen
+                #  we use this to update our upper bound
+                curve_x_max = max(new_x)
+                if curve_x_max > self._x_limits[1]:
+                    self._x_limits[1] = curve_x_max
 
-        if sort_data:
-            # sort resulting data, so we can slice it later
-            sort_order = curve['x'].argsort()
-            curve['x'] = curve['x'][sort_order]
-            curve['y'] = curve['y'][sort_order]
+                # add new data to the given goal id's curve
+                self._curves[topic_name]["goals"][goal_id]['x'] = numpy.append(
+                    self._curves[topic_name]["goals"][goal_id]['x'], new_x)
+                self._curves[topic_name]["goals"][goal_id]['y'] = numpy.append(
+                    self._curves[topic_name]["goals"][goal_id]['y'], new_y)
+
+                if sort_data:
+                    # sort resulting data, so we can slice it later
+                    sort_order = self._curves[topic_name]["goals"][goal_id]['x'].argsort()
+                    self._curves[topic_name]["goals"][goal_id]['x'] = self._curves[topic_name]["goals"][goal_id]['x'][sort_order]
+                    self._curves[topic_name]["goals"][goal_id]['y'] = self._curves[topic_name]["goals"][goal_id]['y'][sort_order]
 
     def clear_values(self):
         """Clear the values for all curves
@@ -229,9 +221,10 @@ class DataPlot(QWidget):
         any changes visible to the user.
         """
         # clear internal curve representation
-        for curve_id in self._curves:
-            self._curves[curve_id]['x'] = numpy.array([])
-            self._curves[curve_id]['y'] = numpy.array([])
+        for topic_values in self._curves.values():
+            for goal_values in topic_values["goals"].values():
+                goal_values["x"] = numpy.array([])
+                goal_values["y"] = numpy.array([])
         self._x_limits = [0, 1.0]
 
     def _merged_autoscale(self):

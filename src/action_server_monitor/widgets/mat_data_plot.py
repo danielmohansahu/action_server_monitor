@@ -133,16 +133,14 @@ class MatDataPlot(QWidget):
         self._curves = {}
         self._canvas.mpl_connect('button_release_event', lambda _: self.limits_changed.emit())
 
-    def add_curve(self, curve_id, curve_name, curve_color=QColor(Qt.blue), markers_on=False):
+    def add_curve(self, label, curve_id, curve_color=QColor(Qt.blue), markers_on=False):
 
         # adding an empty curve and change the limits, so save and restore them
         x_limits = list(self._canvas.axes.get_xbound())
         y_limits = list(self._canvas.axes.get_ybound())
-        if markers_on:
-            marker_size = 3
-        else:
-            marker_size = 0
-        line = self._canvas.axes.plot([], [], 'o-', markersize=marker_size, label=curve_name,
+        marker_size = 3 if markers_on else 0
+
+        line = self._canvas.axes.plot([], [], 'o-', markersize=marker_size, label=label,
                                       linewidth=1, picker=5, color=curve_color.name())[0]
         self._curves[curve_id] = line
 
@@ -159,11 +157,15 @@ class MatDataPlot(QWidget):
             self._update_legend()
 
     def _update_legend(self):
-        handles, labels = self._canvas.axes.get_legend_handles_labels()
+        handles, labels = self._canvas.axes.get_legend_handles_labels()        
         if handles:
-            hl = sorted(zip(handles, labels), key=operator.itemgetter(1))
-            handles, labels = zip(*hl)
-        self._canvas.axes.legend(handles, labels, loc='upper left')
+            filtered_handles = []
+            filtered_lables = []
+            for h,l in sorted(zip(handles, labels), key=operator.itemgetter(1)):
+                if l not in filtered_lables:
+                    filtered_handles.append(h)
+                    filtered_lables.append(l)
+            self._canvas.axes.legend(filtered_handles, filtered_lables, loc='upper left')
 
     def set_values(self, curve, data_x, data_y):
         line = self._curves[curve]
